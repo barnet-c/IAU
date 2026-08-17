@@ -1,0 +1,40 @@
+{
+  "etf": {
+    "ticker": "IAU",
+    "name": "iShares Gold Trust",
+    "creationUnitShares": 50000,
+    "btcPerShare": 0.01868,
+    "_btcPerShareNote": "Underlying (Gold) units per share for IAU. Verify against the issuer / feed; do NOT recompute from mid/spot (that forces NAV = mid and zeroes the basis).",
+    "sharesOutstanding": 0,
+    "sponsor": "BlackRock (iShares Delaware Trust Sponsor LLC)",
+    "custodian": "JPMorgan Chase Bank, N.A., London",
+    "managementFeeBps": 25
+  },
+  "bitcoin": {
+    "ticker": "GC=F"
+  },
+  "market": {
+    "_btcSpotUsdNote": "Dry-run seed only; the live feed overrides it. Kept near spot so --dry-run produces realistic ARKB levels instead of an $85k fantasy.",
+    "btcSpotUsd": 64000
+  },
+  "costs": {
+    "creationRedemptionFeeUsd": 500,
+    "_creationRedemptionFeeNote": "NOT PUBLICLY DISCLOSED. Exhibit E of AP Agreement is private. PARAMETERS.md estimates $100-$300; the live arkb.openexa.com build uses $500 and that is the figure adopted here. It dominates the cost model (~47 of ~52.5 bps), so revisit it before trusting any signal.",
+    "etfCommissionPerShare": 0.005,
+    "btcExecutionBps": 0,
+    "marketImpactBps": 1,
+    "btcSpotSpreadBps": 1
+  },
+  "signals": {
+    "minSpreadAfterCostsBps": 5,
+    "cooldownMs": 15000
+  },
+  "analysis": {
+    "startDate": "2024-01-11"
+  },
+  "coinbase": {
+    "wsUrl": "wss://ws-feed.exchange.coinbase.com",
+    "restUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fquery1.finance.yahoo.com%2Fv8%2Ffinance%2Fchart%2FGC%3DF%3Finterval%3D1d%26range%3D1d"
+  },
+  "marketOverviewUrl": ""
+}

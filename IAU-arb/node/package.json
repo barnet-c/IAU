@@ -1,0 +1,36 @@
+{
+  "name": "arkb-arb-node",
+  "version": "1.1.0",
+  "description": "ARKB ETF Creation/Redemption Arbitrage - Node.js monitor and dashboard",
+  "main": "dashboard.js",
+  "scripts": {
+    "build": "node build.js",
+    "verify": "node verify.js",
+    "test": "node test/utils.test.js",
+    "test:all": "node test/utils.test.js && node build.js && node verify.js",
+    "dev": "npx http-server public -p 3000 -g",
+    "analyze": "node analyze.js",
+    "monitor": "node monitor.js --dry-run",
+    "monitor:live": "node monitor.js",
+    "dashboard": "node dashboard.js --dry-run",
+    "dashboard:live": "node dashboard.js",
+    "deploy": "node build.js && node verify.js && dotenv -- swa deploy ./dist"
+  },
+  "keywords": ["ARKB", "ETF", "arbitrage", "bitcoin"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0",
+    "commander": "^14.0.3",
+    "csv-writer": "^1.6.0",
+    "discord.js": "^14.26.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3",
+    "ws": "^8.20.0",
+    "yahoo-finance2": "^3.14.0"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "etf": {
+    "ticker": "IAU",
+    "name": "iShares Gold Trust",
+    "creationUnitShares": 50000,
+    "btcPerShare": 0.01868,
+    "_btcPerShareNote": "TROY OUNCES of gold per IAU share (physical ratio, declines as the 0.25% fee accrues). ~0.01868 is an ESTIMATE cross-checked from price/spot and public net-assets/shares, which only agree to ~1% -- reconcile against the iShares daily 'ounces of gold per share'. Do NOT recompute from IAU mid/spot (that forces NAV=mid, zeroes the basis).",
+    "sharesOutstanding": 0,
+    "sponsor": "BlackRock (iShares Delaware Trust Sponsor LLC)",
+    "custodian": "JPMorgan Chase Bank, N.A., London",
+    "managementFeeBps": 25
+  },
+  "bitcoin": {
+    "ticker": "GC=F"
+  },
+  "market": {
+    "_btcSpotUsdNote": "Dry-run seed only; the live gold feed overrides it. Kept near gold spot so --dry-run produces realistic IAU levels.",
+    "btcSpotUsd": 4400
+  },
+  "_dataGapNote": "IAU pulls gold + the IAU quote from Yahoo Finance (via the allorigins CORS proxy) because neither is on the shared bitcoin market-overview feed. KNOWN GAP: the only gold price Yahoo serves cleanly is GC=F (COMEX front-month FUTURES), which trades ~1-2% above the LBMA spot IAU's NAV is struck on. So the displayed basis carries a structural futures-vs-spot offset (order tens of bps) and is NOT a trustworthy arbitrage signal. Durable fix: add IAU + an LBMA/XAU spot price to the backend market-overview API (same source ARKB/IBIT use), then IAU becomes a clean drop-in.",
+  "costs": {
+    "creationRedemptionFeeUsd": 500,
+    "_creationRedemptionFeeNote": "PLACEHOLDER ($500, same as ARKB). IAU's Authorized-Participant basket transaction fee is not publicly disclosed and could not be confirmed (SEC/iShares block scraping). Confirm from the prospectus and override. It dominates the cost model, so revisit before trusting any signal.",
+    "etfCommissionPerShare": 0.005,
+    "btcExecutionBps": 0,
+    "marketImpactBps": 1,
+    "btcSpotSpreadBps": 1
+  },
+  "signals": {
+    "minSpreadAfterCostsBps": 5,
+    "cooldownMs": 15000
+  },
+  "analysis": {
+    "startDate": "2024-01-11"
+  },
+  "coinbase": {
+    "wsUrl": "wss://ws-feed.exchange.coinbase.com",
+    "restUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fquery1.finance.yahoo.com%2Fv8%2Ffinance%2Fchart%2FGC%3DF%3Finterval%3D1d%26range%3D1d"
+  },
+  "marketOverviewUrl": "",
+  "etfQuoteUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fquery1.finance.yahoo.com%2Fv8%2Ffinance%2Fchart%2FIAU%3Finterval%3D1d%26range%3D1d"
+}
