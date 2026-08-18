@@ -1356,14 +1356,14 @@ function startBackendMode() {
   socket.on('disconnect', () => {
     setStatus('warn', 'Reconnecting');
     if (!standaloneTimer) {
-      standaloneTimer = setInterval(standaloneTick, 5000);
+      standaloneTimer = setInterval(standaloneTick, 30000);
       standaloneTick();
     }
   });
 
   setTimeout(() => {
     if (!connected && !standaloneTimer) {
-      standaloneTimer = setInterval(standaloneTick, 5000);
+      standaloneTimer = setInterval(standaloneTick, 30000);
       standaloneTick();
     }
   }, 1200);
