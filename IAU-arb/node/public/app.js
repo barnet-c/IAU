@@ -1214,15 +1214,27 @@ async function loadConfig() {
 }
 
 async function fetchBtcPrice() {
-  // IAU: the "spot" feed is Yahoo Finance gold (GC=F), wrapped in a CORS proxy
-  // because Yahoo sends no CORS header. Shape: chart.result[0].meta.regularMarketPrice.
+  // IAU: fetch gold (GC=F) from Yahoo Finance. Yahoo shape: chart.result[0].meta.regularMarketPrice
   const url = CFG.coinbase?.restUrl;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`gold fetch failed: ${res.status}`);
-  const data = await res.json();
-  const price = Number(data?.chart?.result?.[0]?.meta?.regularMarketPrice ?? data?.price);
-  if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid gold price');
-  return price;
+  const maxRetries = 3;
+  let lastErr;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const data = await res.json();
+      const price = Number(data?.chart?.result?.[0]?.meta?.regularMarketPrice);
+      if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid gold price');
+      return price;
+    } catch (e) {
+      lastErr = e;
+      if (i < maxRetries - 1) {
+        const backoffMs = Math.pow(2, i) * 1000;  // 1s, 2s, 4s
+        await new Promise(r => setTimeout(r, backoffMs));
+      }
+    }
+  }
+  throw lastErr || new Error('Gold fetch failed');
 }
 
 function nextStandaloneSnapshot(btcPrice) {
@@ -1374,8 +1386,7 @@ function startBackendMode() {
 
 /* ── external market feed ────────────────────────────────────── */
 async function loadMarketOverview() {
-  // IAU is not on the shared bitcoin market-overview feed, so the independent
-  // quote comes from twelvedata (stock quote API), reliable + free tier.
+  // IAU quote from Yahoo Finance (same source as gold). Shape: chart.result[0].meta
   const host = $('market-overview');
   if (!host) return;
   const url = CFG.etfQuoteUrl;
@@ -1383,35 +1394,30 @@ async function loadMarketOverview() {
     host.innerHTML = '<div class="empty" style="padding:28px"><span>No market feed configured.</span></div>';
     return;
   }
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    // twelvedata free tier rate-limits at ~60 calls/minute. If we hit 429,
-    // backoff exponentially so the dashboard doesn't flicker offline constantly.
-    if (res.status === 429) {
-      host.innerHTML = '<div class="empty" style="padding:28px"><span>Rate limited. Retrying in 30s.</span></div>';
-      setText('market-updated', 'rate-limited');
-      return;
-    }
-    if (!res.ok) throw new Error(`status ${res.status}`);
-    const json = await res.json();
-    // twelvedata response shape: {close, previous_close, percent_change, ...}
-    if (json.error || json.code) throw new Error(json.message || 'API error');
-    const last = Number(json.close);
-    if (!Number.isFinite(last) || last <= 0) throw new Error('no IAU quote');
-    const prev = Number(json.previous_close ?? json.close);
-    const chgPct = Number.isFinite(prev) && prev > 0 ? ((last - prev) / prev) * 100 : null;
-    // twelvedata free tier doesn't include bid/ask, so synthesize from last
-    const bid = last * 0.99985;
-    const ask = last * 1.00015;
-    // feed the standalone snapshot loop
-    liveArkb = { last, bid, ask };
 
-    const sym = String((CFG.etf && CFG.etf.ticker) || 'IAU');
-    const chg = chgPct != null
-      ? `<span style="color:${chgPct >= 0 ? 'var(--pos)' : 'var(--neg)'};font-weight:700">${fmtSigned(chgPct, 2)}%</span>`
-      : '—';
-    const cell = (v, d2 = 2) => (v != null && Number.isFinite(Number(v)) ? fmtUsd(v, d2) : '—');
-    const row = `<tr>
+  const maxRetries = 3;
+  let lastErr;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const json = await res.json();
+      const meta = json?.chart?.result?.[0]?.meta || {};
+      const last = Number(meta.regularMarketPrice);
+      if (!Number.isFinite(last) || last <= 0) throw new Error('no IAU quote');
+      const prev = Number(meta.chartPreviousClose ?? meta.previousClose);
+      const chgPct = Number.isFinite(prev) && prev > 0 ? ((last - prev) / prev) * 100 : null;
+      const bid = last * 0.99985;
+      const ask = last * 1.00015;
+      // feed the standalone snapshot loop
+      liveArkb = { last, bid, ask };
+
+      const sym = String((CFG.etf && CFG.etf.ticker) || 'IAU');
+      const chg = chgPct != null
+        ? `<span style="color:${chgPct >= 0 ? 'var(--pos)' : 'var(--neg)'};font-weight:700">${fmtSigned(chgPct, 2)}%</span>`
+        : '—';
+      const cell = (v, d2 = 2) => (v != null && Number.isFinite(Number(v)) ? fmtUsd(v, d2) : '—');
+      const row = `<tr>
         <td style="color:var(--ink);font-weight:700">${sym}</td>
         <td class="num">${cell(last)}</td>
         <td class="num">${cell(bid)}</td>
@@ -1419,20 +1425,26 @@ async function loadMarketOverview() {
         <td class="num">—</td>
         <td class="num">${chg}</td>
       </tr>`;
-    host.innerHTML = `<table class="data">
-      <thead><tr><th>Symbol</th><th>Last</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Day</th></tr></thead>
-      <tbody>${row}</tbody></table>`;
-    lastMarketHtml = host.innerHTML;  // cache successful render
-    setText('market-updated', hhmmss(Date.now()));
-  } catch (e) {
-    // On error, keep showing the last successful data (don't flip to offline immediately).
-    // Only show "unavailable" if we've never had a successful fetch.
-    if (!lastMarketHtml) {
-      host.innerHTML = '<div class="empty" style="padding:28px"><span>IAU quote unavailable.</span></div>';
-      setText('market-updated', 'offline');
+      host.innerHTML = `<table class="data">
+        <thead><tr><th>Symbol</th><th>Last</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Day</th></tr></thead>
+        <tbody>${row}</tbody></table>`;
+      lastMarketHtml = host.innerHTML;  // cache successful render
+      setText('market-updated', hhmmss(Date.now()));
+      return;  // success, exit retry loop
+    } catch (e) {
+      lastErr = e;
+      if (attempt < maxRetries - 1) {
+        const backoffMs = Math.pow(2, attempt) * 1000;  // 1s, 2s, 4s
+        await new Promise(r => setTimeout(r, backoffMs));
+      }
     }
-    // else: silently fail, keep showing stale data until next successful fetch
   }
+  // All retries failed: show "unavailable" only on first-time failure (no cached data)
+  if (!lastMarketHtml) {
+    host.innerHTML = '<div class="empty" style="padding:28px"><span>IAU quote unavailable.</span></div>';
+    setText('market-updated', 'offline');
+  }
+  // else: silently fail, keep showing cached data until next poll succeeds
 }
 
 /* ══════════════════════════════════════════════════════════════
