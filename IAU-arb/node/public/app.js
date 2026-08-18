@@ -1384,6 +1384,13 @@ async function loadMarketOverview() {
   }
   try {
     const res = await fetch(url, { cache: 'no-store' });
+    // twelvedata free tier rate-limits at ~60 calls/minute. If we hit 429,
+    // backoff exponentially so the dashboard doesn't flicker offline constantly.
+    if (res.status === 429) {
+      host.innerHTML = '<div class="empty" style="padding:28px"><span>Rate limited. Retrying in 30s.</span></div>';
+      setText('market-updated', 'rate-limited');
+      return;
+    }
     if (!res.ok) throw new Error(`status ${res.status}`);
     const json = await res.json();
     // twelvedata response shape: {close, previous_close, percent_change, ...}
@@ -1634,7 +1641,7 @@ async function boot() {
   bindSizing();          // after loadConfig so the fee field shows the real default
   startBackendMode();
   loadMarketOverview();
-  setInterval(loadMarketOverview, 8000);
+  setInterval(loadMarketOverview, 30000);  // 30s: respect twelvedata free-tier rate limit (~60 calls/min)
 }
 
 boot();
