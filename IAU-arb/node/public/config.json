@@ -35,8 +35,8 @@
   },
   "coinbase": {
     "wsUrl": "wss://ws-feed.exchange.coinbase.com",
-    "restUrl": "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=1d"
+    "restUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fquery1.finance.yahoo.com%2Fv8%2Ffinance%2Fchart%2FGC%3DF%3Finterval%3D1d%26range%3D1d"
   },
   "marketOverviewUrl": "",
-  "etfQuoteUrl": "https://query1.finance.yahoo.com/v8/finance/chart/IAU?interval=1d&range=1d"
+  "etfQuoteUrl": "https://api.allorigins.win/raw?url=https%3A%2F%2Fquery1.finance.yahoo.com%2Fv8%2Ffinance%2Fchart%2FIAU%3Finterval%3D1d%26range%3D1d"
 }
