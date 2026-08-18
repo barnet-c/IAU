@@ -750,6 +750,7 @@ const state = {
 };
 
 let liveArkb = null;
+let lastMarketHtml = null;  // cache the last successful market overview render
 let standaloneTimer = null;
 let chart = null;
 const sparks = {};
@@ -1421,10 +1422,16 @@ async function loadMarketOverview() {
     host.innerHTML = `<table class="data">
       <thead><tr><th>Symbol</th><th>Last</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Day</th></tr></thead>
       <tbody>${row}</tbody></table>`;
+    lastMarketHtml = host.innerHTML;  // cache successful render
     setText('market-updated', hhmmss(Date.now()));
-  } catch {
-    host.innerHTML = '<div class="empty" style="padding:28px"><span>IAU quote unavailable.</span></div>';
-    setText('market-updated', 'offline');
+  } catch (e) {
+    // On error, keep showing the last successful data (don't flip to offline immediately).
+    // Only show "unavailable" if we've never had a successful fetch.
+    if (!lastMarketHtml) {
+      host.innerHTML = '<div class="empty" style="padding:28px"><span>IAU quote unavailable.</span></div>';
+      setText('market-updated', 'offline');
+    }
+    // else: silently fail, keep showing stale data until next successful fetch
   }
 }
 
