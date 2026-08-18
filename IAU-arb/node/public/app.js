@@ -1374,7 +1374,7 @@ function startBackendMode() {
 /* ── external market feed ────────────────────────────────────── */
 async function loadMarketOverview() {
   // IAU is not on the shared bitcoin market-overview feed, so the independent
-  // quote comes from Yahoo Finance (IAU), wrapped in the same CORS proxy as gold.
+  // quote comes from twelvedata (stock quote API), reliable + free tier.
   const host = $('market-overview');
   if (!host) return;
   const url = CFG.etfQuoteUrl;
@@ -1386,14 +1386,16 @@ async function loadMarketOverview() {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`status ${res.status}`);
     const json = await res.json();
-    const meta = json?.chart?.result?.[0]?.meta || {};
-    const last = Number(meta.regularMarketPrice);
+    // twelvedata response shape: {close, previous_close, percent_change, ...}
+    if (json.error || json.code) throw new Error(json.message || 'API error');
+    const last = Number(json.close);
     if (!Number.isFinite(last) || last <= 0) throw new Error('no IAU quote');
-    const prev = Number(meta.chartPreviousClose ?? meta.previousClose);
+    const prev = Number(json.previous_close ?? json.close);
     const chgPct = Number.isFinite(prev) && prev > 0 ? ((last - prev) / prev) * 100 : null;
-    const bid = Number.isFinite(Number(meta.bid)) ? Number(meta.bid) : null;
-    const ask = Number.isFinite(Number(meta.ask)) ? Number(meta.ask) : null;
-    // feed the standalone snapshot loop (bid/ask synthesised from last if absent)
+    // twelvedata free tier doesn't include bid/ask, so synthesize from last
+    const bid = last * 0.99985;
+    const ask = last * 1.00015;
+    // feed the standalone snapshot loop
     liveArkb = { last, bid, ask };
 
     const sym = String((CFG.etf && CFG.etf.ticker) || 'IAU');
@@ -1412,8 +1414,7 @@ async function loadMarketOverview() {
     host.innerHTML = `<table class="data">
       <thead><tr><th>Symbol</th><th>Last</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Day</th></tr></thead>
       <tbody>${row}</tbody></table>`;
-    const t = Number(meta.regularMarketTime);
-    setText('market-updated', Number.isFinite(t) ? hhmmss(t * 1000) : hhmmss(Date.now()));
+    setText('market-updated', hhmmss(Date.now()));
   } catch {
     host.innerHTML = '<div class="empty" style="padding:28px"><span>IAU quote unavailable.</span></div>';
     setText('market-updated', 'offline');
